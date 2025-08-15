@@ -2,7 +2,7 @@ import sys
 import os
 from PIL import Image
 
-def gif_to_frames(gif_path, scale_factor=0.5, bg_width=1980, bg_height=1080, x_pos=None, y_pos=None):
+def gif_to_frames(gif_path, scale_factor=0.5, bg_width=1980, bg_height=1080, x_pos=None, y_pos=None, copies_per_frame=1):
     gif_path = os.path.abspath(gif_path)
     gif_name = os.path.splitext(os.path.basename(gif_path))[0]
     output_folder = os.path.join(os.path.dirname(gif_path), f"{gif_name}_frames")
@@ -15,6 +15,8 @@ def gif_to_frames(gif_path, scale_factor=0.5, bg_width=1980, bg_height=1080, x_p
                 os.makedirs(output_folder)
 
             frame = 0
+            image_count = 0
+
             while True:
                 im.seek(frame)
                 frame_image = im.convert("RGBA")
@@ -42,16 +44,19 @@ def gif_to_frames(gif_path, scale_factor=0.5, bg_width=1980, bg_height=1080, x_p
                 y_pos = min(y_pos, bg_height - new_height)
 
                 background = Image.new("RGBA", (bg_width, bg_height), (0, 0, 0, 0))
-
                 background.paste(frame_image, (x_pos, y_pos), frame_image)
 
-                frame_filename = os.path.join(output_folder, f"{prefix}-{frame}.png")
-                background.save(frame_filename, format="PNG")
-                print(f"Saved: {frame_filename}")
+                for _ in range(copies_per_frame):
+                    frame_filename = os.path.join(output_folder, f"{prefix}-{image_count}.png")
+                    background.save(frame_filename, format="PNG")
+                    print(f"Saved: {frame_filename}")
+                    image_count += 1
+
                 frame += 1
+
     except EOFError:
-        print(f"\nFinished with total of {frame} frames.")
-        print(f"Saved as: {output_folder}")
+        print(f"\nFinished with total of {frame} original frames, {image_count} total images.")
+        print(f"Saved in: {output_folder}")
     except Exception as e:
         print(f"Error: {e}")
 
@@ -74,7 +79,7 @@ def main():
         bg_height = 1080
 
     try:
-        scale_factor = float(input("Enter the scale factor for the GIF (e.g., 0.5 to reduce by 50%):"))
+        scale_factor = float(input("Enter the scale factor for the GIF (e.g., 0.5 to reduce by 50%): "))
     except ValueError:
         print("Invalid scale factor, using default 0.5.")
         scale_factor = 0.5
@@ -87,6 +92,14 @@ def main():
         x_pos = 0
         y_pos = bg_height - 1
 
+    try:
+        copies_per_frame = int(input("Enter how many copies to export per frame: "))
+        if copies_per_frame < 1:
+            copies_per_frame = 1
+    except ValueError:
+        print("Invalid input, using default of 1 copy.")
+        copies_per_frame = 1
+
     if not os.path.isfile(gif_path):
         print("File does not exist.")
         input("Press Enter to exit...")
@@ -97,7 +110,7 @@ def main():
         input("Press Enter to exit...")
         return
 
-    gif_to_frames(gif_path, scale_factor, bg_width, bg_height, x_pos, y_pos)
+    gif_to_frames(gif_path, scale_factor, bg_width, bg_height, x_pos, y_pos, copies_per_frame)
     input("Press Enter to exit...")
 
 if __name__ == "__main__":
